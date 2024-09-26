@@ -16,8 +16,9 @@ app.use(bodyParser.json());
 
 app.get("/healthz", (req, res) => {
   res.setHeader("Cache-Control", "no-cache");
+
   //checking if body is there or not
-  const raw_body = Object.keys(req.body).lengt;
+  const raw_body = Object.keys(req.body).length;
   if (req.body && raw_body > 0) {
     return res.status(400).end();
   }
@@ -40,6 +41,7 @@ app.get("/healthz", (req, res) => {
     }
   });
 });
+
 //All others api call except get will give 405
 app.all("/healthz", (req, res) => {
   res.setHeader("Cache-Control", "no-cache");
