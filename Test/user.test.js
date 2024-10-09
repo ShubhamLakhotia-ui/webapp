@@ -3,7 +3,7 @@ const chaiHttp = require("chai-http");
 const http = require("http");
 const app = require("../connection");
 const { User } = require("../models");
-require("dotenv").config();
+// require("dotenv").config();
 chai.use(chaiHttp);
 const expect = chai.expect;
 
