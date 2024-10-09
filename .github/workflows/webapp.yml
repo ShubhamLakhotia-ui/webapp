@@ -24,4 +24,5 @@ jobs:
       - name: Run Test Cases
         run: |
           export NODE_ENV=development
+          export DB_DIALECT=mysql
           npx mocha Test/user.test.js
