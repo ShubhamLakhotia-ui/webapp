@@ -73,7 +73,7 @@ if (config.use_env_variable) {
 }
 
 // In the test environment, don't sync or authenticate the database
-if (env !== "test") {
+if (process.env.NODE_ENV !== "test") {
   sequelize
     .authenticate()
     .then(() => {
