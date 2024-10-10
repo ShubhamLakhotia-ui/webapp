@@ -63,28 +63,13 @@ const PORT = process.env.TEST_PORT || 3002;
 
 describe("API Test", () => {
   before(async () => {
-    sinon.stub(Sequelize.prototype, "sync").resolves();
+    // Stub the methods of User model
+    sinon.stub(User, "findOne").resolves(null); // No user found for tests
+    sinon.stub(User, "create").rejects(new Error("Email already exists")); // Prevent creation
+    sinon.stub(User, "destroy").resolves(); // Stub destroy
+    sinon.stub(User, "update").resolves(); // Stub update
 
-    sinon.stub(User, "destroy").resolves();
-
-    sinon.stub(User, "findOne").callsFake(async ({ where: { email } }) => {
-      if (email === "smaheshwari029@gmail.com") {
-        return Promise.resolve({ email });
-      }
-      return Promise.resolve(null);
-    });
-
-    // Stub create to handle unique email scenario
-    sinon.stub(User, "create").callsFake(async (userData) => {
-      const existingUser = await User.findOne({
-        where: { email: userData.email },
-      });
-      if (existingUser) {
-        throw new Error("Email already exists");
-      }
-      return userData;
-    });
-
+    // Start the server
     await new Promise((resolve) => server.listen(PORT, resolve));
   });
 
