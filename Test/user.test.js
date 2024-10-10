@@ -52,7 +52,7 @@ const chai = require("chai");
 const chaiHttp = require("chai-http");
 const http = require("http");
 const app = require("../connection");
-const { User } = require("../models");
+const { User, Sequelize } = require("../models"); // Import Sequelize to stub sync
 const sinon = require("sinon");
 
 chai.use(chaiHttp);
@@ -63,15 +63,15 @@ const PORT = process.env.TEST_PORT || 3002;
 
 describe("API Test", () => {
   before(async () => {
-    // Stub the User model methods
+    sinon.stub(Sequelize.prototype, "sync").resolves();
+
     sinon.stub(User, "destroy").resolves();
 
-    // Stub findOne to simulate a user already existing
     sinon.stub(User, "findOne").callsFake(async ({ where: { email } }) => {
       if (email === "smaheshwari029@gmail.com") {
-        return Promise.resolve({ email }); // User already exists
+        return Promise.resolve({ email });
       }
-      return Promise.resolve(null); // No user found
+      return Promise.resolve(null);
     });
 
     // Stub create to handle unique email scenario
@@ -80,9 +80,9 @@ describe("API Test", () => {
         where: { email: userData.email },
       });
       if (existingUser) {
-        throw new Error("Email already exists"); // Simulate error if email already exists
+        throw new Error("Email already exists");
       }
-      return userData; // Simulate successful creation for other emails
+      return userData;
     });
 
     await new Promise((resolve) => server.listen(PORT, resolve));
@@ -91,7 +91,7 @@ describe("API Test", () => {
   after(async () => {
     await new Promise((resolve) => {
       server.close(resolve);
-      sinon.restore(); // Restore the original methods after tests
+      sinon.restore();
     });
   });
 
@@ -100,6 +100,6 @@ describe("API Test", () => {
       account_created: "2021-01-01",
       account_updated: "2021-01-02",
     });
-    expect(res.status).to.equal(401); // Expecting 401 status for unauthorized update
+    expect(res.status).to.equal(401);
   });
 });
