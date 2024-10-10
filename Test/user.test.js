@@ -95,7 +95,6 @@ const expect = chai.expect;
 
 describe("API Tests", () => {
   beforeEach(() => {
-    // Reset the stubs before each test
     chaiHttpMock.request.resetHistory();
   });
 
@@ -107,9 +106,9 @@ describe("API Tests", () => {
 
   it("should handle POST requests to /v1/user", async () => {
     const res = await chai.request().post("/v1/user").send({
-      first_name: "John",
-      last_name: "Doe",
-      email: "john@example.com",
+      first_name: "Shubham",
+      last_name: "Lakhotia",
+      email: "shubham@example.com",
       password: "password123",
     });
     expect(res).to.have.status(200);
