@@ -1,4 +1,3 @@
-// __mocks__/chai-http.js
 const sinon = require("sinon");
 const chai = require("chai");
 const chaiHttp = require("chai-http");
@@ -16,9 +15,10 @@ class MockChaiHttp {
   constructor() {
     this.request = sinon.stub().returns(this);
     this.get = sinon.stub().resolves(mockResponse);
-    this.post = sinon.stub().resolves(mockResponse);
+    this.post = sinon.stub().returns(this); // Return `this` to chain .send()
     this.put = sinon.stub().resolves(mockResponse);
     this.delete = sinon.stub().resolves(mockResponse);
+    this.send = sinon.stub().resolves(mockResponse); // Add send to chain with post()
   }
 }
 

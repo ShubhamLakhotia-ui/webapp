@@ -99,14 +99,19 @@ describe("API Tests", () => {
     chaiHttpMock.request.resetHistory();
   });
 
-  it("should return 200 and success message", async () => {
-    const res = await chai.request().get("/api/v1/test-endpoint");
+  it("should return 200 and success message for GET request", async () => {
+    const res = await chai.request().get("/v1/user/self");
     expect(res).to.have.status(200);
     expect(res.body).to.deep.equal(mockResponse.body);
   });
 
-  it("should handle POST requests", async () => {
-    const res = await chai.request().post("/api/v1/test-endpoint");
+  it("should handle POST requests to /v1/user", async () => {
+    const res = await chai.request().post("/v1/user").send({
+      first_name: "John",
+      last_name: "Doe",
+      email: "john@example.com",
+      password: "password123",
+    });
     expect(res).to.have.status(200);
     expect(res.body).to.deep.equal(mockResponse.body);
   });
