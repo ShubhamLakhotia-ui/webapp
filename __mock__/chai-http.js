@@ -34,7 +34,6 @@ const chaiHttp = require("chai-http");
 const app = require("../connection");
 chai.use(chaiHttp);
 
-// Define multiple mock responses
 const mockResponses = {
   getHealthz: {
     status: 200,

@@ -86,8 +86,6 @@ app.post("/v1/user", async (req, res) => {
     if (error.name === "SequelizeUniqueConstraintError") {
       return res.status(400).json({ error: "Email already exists" });
     }
-
-    console.log(error);
     return res.status(500).json({ error: "Internal Server Error" });
   }
 });
@@ -120,7 +118,6 @@ app.get("/v1/user/self", authenticate, async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ error: "Internal Server Error" });
-    console.log("Error", err);
   }
 });
 
@@ -186,7 +183,6 @@ app.get("/healthz", async (req, res) => {
     await db.sequelize.authenticate();
     return res.status(200).end();
   } catch (error) {
-    console.error("Unable to connect to the database:", error);
     return res.status(503).end();
   }
 });
@@ -216,7 +212,7 @@ db.sequelize
     });
   })
   .catch((error) => {
-    console.error("Failed to sync database:", error);
+    // console.error("Failed to sync database:", error);
   });
 
 module.exports = app;
