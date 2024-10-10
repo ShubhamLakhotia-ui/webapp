@@ -1,3 +1,31 @@
+# name: WebApp
+
+# on:
+#   pull_request:
+#     branches:
+#       - main
+
+# jobs:
+#   test:
+#     runs-on: ubuntu-latest
+#     env: # Set environment variables here
+#       NODE_ENV: test
+
+#     steps:
+#       - name: Checkout code
+#         uses: actions/checkout@v3
+
+#       - name: Set up Node.js
+#         uses: actions/setup-node@v3
+#         with:
+#           node-version: "22"
+
+#       - name: Install dependencies
+#         run: npm install
+
+#       - name: Run Test Cases
+#         run: npx mocha Test/user.test.js
+
 name: WebApp
 
 on:
@@ -8,8 +36,19 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    env: # Set environment variables here
-      NODE_ENV: test
+    services:
+      mysql:
+        image: mysql:5.7
+        env:
+          MYSQL_DATABASE: user
+          MYSQL_ROOT_PASSWORD: ${{ secrets.DB_PASSWORD }} # Use secret for root password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
 
     steps:
       - name: Checkout code
@@ -22,6 +61,14 @@ jobs:
 
       - name: Install dependencies
         run: npm install
+
+      - name: Set environment variables
+        run: |
+          echo "DB_HOST=localhost" >> $GITHUB_ENV
+          echo "DB_USERNAME=${{ secrets.DB_USERNAME }}" >> $GITHUB_ENV
+          echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> $GITHUB_ENV
+          echo "DB_DATABASE=${{ secrets.DB_DATABASE }}" >> $GITHUB_ENV
+          echo "DB_DIALECT=mysql" >> $GITHUB_ENV
 
       - name: Run Test Cases
         run: npx mocha Test/user.test.js
