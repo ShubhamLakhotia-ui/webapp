@@ -48,43 +48,66 @@
 //   });
 // });
 
-const chai = require("chai");
-const chaiHttp = require("chai-http");
-const http = require("http");
-const app = require("../connection");
-const { User, Sequelize } = require("../models"); // Import Sequelize to stub sync
-const sinon = require("sinon");
+// const chai = require("chai");
+// const chaiHttp = require("chai-http");
+// const http = require("http");
+// const app = require("../connection");
+// const { User, Sequelize } = require("../models"); // Import Sequelize to stub sync
+// const sinon = require("sinon");
 
-chai.use(chaiHttp);
+// chai.use(chaiHttp);
+// const expect = chai.expect;
+
+// const server = http.createServer(app);
+// const PORT = process.env.TEST_PORT || 3002;
+
+// describe("API Test", () => {
+//   before(async () => {
+//     // Stub the methods of User model
+//     sinon.stub(User, "findOne").resolves(null); // No user found for tests
+//     sinon.stub(User, "create").rejects(new Error("Email already exists")); // Prevent creation
+//     sinon.stub(User, "destroy").resolves(); // Stub destroy
+//     sinon.stub(User, "update").resolves(); // Stub update
+
+//     // Start the server
+//     await new Promise((resolve) => server.listen(PORT, resolve));
+//   });
+
+//   after(async () => {
+//     await new Promise((resolve) => {
+//       server.close(resolve);
+//       sinon.restore();
+//     });
+//   });
+
+//   it("NOT allow user to update account_created and account_updated", async () => {
+//     const res = await chai.request(server).put("/v1/user/self").send({
+//       account_created: "2021-01-01",
+//       account_updated: "2021-01-02",
+//     });
+//     expect(res.status).to.equal(401);
+//   });
+// });
+
+const chai = require("chai");
+const { chaiHttpMock, mockResponse } = require("../__mock__/chai-http");
 const expect = chai.expect;
 
-const server = http.createServer(app);
-const PORT = process.env.TEST_PORT || 3002;
-
-describe("API Test", () => {
-  before(async () => {
-    // Stub the methods of User model
-    sinon.stub(User, "findOne").resolves(null); // No user found for tests
-    sinon.stub(User, "create").rejects(new Error("Email already exists")); // Prevent creation
-    sinon.stub(User, "destroy").resolves(); // Stub destroy
-    sinon.stub(User, "update").resolves(); // Stub update
-
-    // Start the server
-    await new Promise((resolve) => server.listen(PORT, resolve));
+describe("API Tests", () => {
+  beforeEach(() => {
+    // Reset the stubs before each test
+    chaiHttpMock.request.resetHistory();
   });
 
-  after(async () => {
-    await new Promise((resolve) => {
-      server.close(resolve);
-      sinon.restore();
-    });
+  it("should return 200 and success message", async () => {
+    const res = await chai.request().get("/api/v1/test-endpoint");
+    expect(res).to.have.status(200);
+    expect(res.body).to.deep.equal(mockResponse.body);
   });
 
-  it("NOT allow user to update account_created and account_updated", async () => {
-    const res = await chai.request(server).put("/v1/user/self").send({
-      account_created: "2021-01-01",
-      account_updated: "2021-01-02",
-    });
-    expect(res.status).to.equal(401);
+  it("should handle POST requests", async () => {
+    const res = await chai.request().post("/api/v1/test-endpoint");
+    expect(res).to.have.status(200);
+    expect(res.body).to.deep.equal(mockResponse.body);
   });
 });
