@@ -8,6 +8,8 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env: # Set environment variables here
+      NODE_ENV: test
 
     steps:
       - name: Checkout code
@@ -22,6 +24,4 @@ jobs:
         run: npm install
 
       - name: Run Test Cases
-        run: |
-          export NODE_ENV=test
-          npx mocha Test/user.test.js
+        run: npx mocha Test/user.test.js

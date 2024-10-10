@@ -72,27 +72,6 @@ if (config.use_env_variable) {
   );
 }
 
-// In the test environment, don't sync or authenticate the database
-if (process.env.NODE_ENV !== "test") {
-  sequelize
-    .authenticate()
-    .then(() => {
-      console.log("Database connection is healthy");
-    })
-    .catch((err) => {
-      console.error("Unable to connect to the database:", err);
-    });
-
-  sequelize
-    .sync()
-    .then(() => {
-      console.log("Database synced successfully");
-    })
-    .catch((err) => {
-      console.error("Failed to sync database:", err);
-    });
-}
-
 // Dynamically load all models
 fs.readdirSync(__dirname)
   .filter((file) => {
