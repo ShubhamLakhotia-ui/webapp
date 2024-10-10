@@ -24,4 +24,4 @@ Created two middlewares for checking db connection and auth
 
 ## yml
 
-Added webapp.yml and mocking of database
+Added webapp.yml and created mock of database
