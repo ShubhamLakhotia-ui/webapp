@@ -89,29 +89,77 @@
 //   });
 // });
 
+// const chai = require("chai");
+// const { chaiHttpMock, mockResponse } = require("../__mock__/chai-http");
+// const expect = chai.expect;
+
+// describe("API Tests", () => {
+//   beforeEach(() => {
+//     chaiHttpMock.request.resetHistory();
+//   });
+
+//   it("should return 200 and success message for GET request", async () => {
+//     const res = await chai.request().get("/v1/user/self");
+//     expect(res).to.have.status(200);
+//     expect(res.body).to.deep.equal(mockResponse.body);
+//   });
+
+//   it("should handle POST requests to /v1/user", async () => {
+//     const res = await chai.request().post("/v1/user").send({
+//       first_name: "Shubham",
+//       last_name: "Lakhotia",
+//       email: "shubham@example.com",
+//       password: "password123",
+//     });
+//     expect(res).to.have.status(200);
+//     expect(res.body).to.deep.equal(mockResponse.body);
+//   });
+// });
 const chai = require("chai");
-const { chaiHttpMock, mockResponse } = require("../__mock__/chai-http");
+const { chaiHttpMock, mockResponses } = require("../__mock__/chai-http");
 const expect = chai.expect;
 
-describe("API Tests", () => {
+describe("API Tests with Multiple Mock Responses", () => {
   beforeEach(() => {
     chaiHttpMock.request.resetHistory();
   });
 
-  it("should return 200 and success message for GET request", async () => {
-    const res = await chai.request().get("/v1/user/self");
-    expect(res).to.have.status(200);
-    expect(res.body).to.deep.equal(mockResponse.body);
+  it("should return 200 for GET /healthz", async () => {
+    const res = await chai.request().get("/healthz");
+    expect(res).to.have.status(mockResponses.getHealthz.status);
+    expect(res.body).to.deep.equal(mockResponses.getHealthz.body);
   });
 
-  it("should handle POST requests to /v1/user", async () => {
+  it("should return 200 for GET /v1/user/self", async () => {
+    const res = await chai.request().get("/v1/user/self");
+    expect(res).to.have.status(mockResponses.getUserSelf.status);
+    expect(res.body).to.deep.equal(mockResponses.getUserSelf.body);
+  });
+
+  it("should return 201 for POST /v1/user", async () => {
     const res = await chai.request().post("/v1/user").send({
       first_name: "Shubham",
       last_name: "Lakhotia",
       email: "shubham@example.com",
       password: "password123",
     });
-    expect(res).to.have.status(200);
-    expect(res.body).to.deep.equal(mockResponse.body);
+    expect(res).to.have.status(mockResponses.postUser.status);
+    expect(res.body).to.deep.equal(mockResponses.postUser.body);
+  });
+
+  it("should return 405 for delete methods", async () => {
+    const res = await chai.request().delete("/healthz");
+    expect(res).to.have.status(mockResponses.methodNotAllowed.status);
+    expect(res.body).to.deep.equal(mockResponses.methodNotAllowed.body);
+  });
+  it("should return 405 for put methods", async () => {
+    const res = await chai.request().put("/healthz");
+    expect(res).to.have.status(mockResponses.methodNotAllowed.status);
+    expect(res.body).to.deep.equal(mockResponses.methodNotAllowed.body);
+  });
+  it("should return 405 for head methods", async () => {
+    const res = await chai.request().put("/healthz");
+    expect(res).to.have.status(mockResponses.methodNotAllowed.status);
+    expect(res.body).to.deep.equal(mockResponses.methodNotAllowed.body);
   });
 });
