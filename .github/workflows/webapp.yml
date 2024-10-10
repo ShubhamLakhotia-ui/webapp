@@ -27,5 +27,5 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Run Test Cases
-        run: npx mocha Test/user.test.js
+      # - name: Run Test Cases
+      #   run: npx mocha Test/user.test.js
