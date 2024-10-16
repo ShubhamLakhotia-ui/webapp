@@ -37,10 +37,15 @@ jobs:
           AMI_NAME: ${{ secrets.AMI_NAME }}
         run: |
           echo "AWS_REGION=${AWS_REGION}"
+          if [ -z "${AWS_REGION}" ]; then echo "ERROR: AWS_REGION is empty!"; fi
           echo "AWS_SOURCE_AMI=${AWS_SOURCE_AMI}"
+          if [ -z "${AWS_SOURCE_AMI}" ]; then echo "ERROR: AWS_SOURCE_AMI is empty!"; fi
           echo "INSTANCE_TYPE=${INSTANCE_TYPE}"
+          if [ -z "${INSTANCE_TYPE}" ]; then echo "ERROR: INSTANCE_TYPE is empty!"; fi
           echo "SSH_USERNAME=${SSH_USERNAME}"
+          if [ -z "${SSH_USERNAME}" ]; then echo "ERROR: SSH_USERNAME is empty!"; fi
           echo "AMI_NAME=${AMI_NAME}"
+          if [ -z "${AMI_NAME}" ]; then echo "ERROR: AMI_NAME is empty!"; fi
 
       # Step 6: Validate Packer template
       - name: Run Packer Validate
