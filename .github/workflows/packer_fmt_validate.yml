@@ -1,0 +1,77 @@
+name: Packer Status Check
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  packer_check:
+    name: "Packer Format and Validation"
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout the code
+      - name: Checkout Code
+        uses: actions/checkout@v2
+
+      # Step 2: Install Packer
+      - name: Install Packer
+        run: sudo apt-get install -y packer
+
+      # Step 3: Initialize Packer
+      - name: Initialize Packer
+        run: packer init ./packer/aws.pkr.hcl
+
+      # Step 4: Format check using Packer fmt
+      - name: Run Packer Fmt
+        run: packer fmt -check -diff ./packer/aws.pkr.hcl
+
+      # Step 5: Echo the environment variables for debugging
+      - name: Echo Environment Variables
+        env:
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          AWS_SOURCE_AMI: ${{ secrets.AWS_SOURCE_AMI }}
+          INSTANCE_TYPE: ${{ secrets.INSTANCE_TYPE }}
+          SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
+          AMI_NAME: ${{ secrets.AMI_NAME }}
+        run: |
+          echo "AWS_REGION=${AWS_REGION}"
+          if [ -z "${AWS_REGION}" ]; then echo "ERROR: AWS_REGION is empty!"; fi
+          echo "AWS_SOURCE_AMI=${AWS_SOURCE_AMI}"
+          if [ -z "${AWS_SOURCE_AMI}" ]; then echo "ERROR: AWS_SOURCE_AMI is empty!"; fi
+          echo "INSTANCE_TYPE=${INSTANCE_TYPE}"
+          if [ -z "${INSTANCE_TYPE}" ]; then echo "ERROR: INSTANCE_TYPE is empty!"; fi
+          echo "SSH_USERNAME=${SSH_USERNAME}"
+          if [ -z "${SSH_USERNAME}" ]; then echo "ERROR: SSH_USERNAME is empty!"; fi
+          echo "AMI_NAME=${AMI_NAME}"
+          if [ -z "${AMI_NAME}" ]; then echo "ERROR: AMI_NAME is empty!"; fi
+
+      # Step 6: Validate Packer template
+      - name: Run Packer Validate
+        env:
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          AWS_SOURCE_AMI: ${{ secrets.AWS_SOURCE_AMI }}
+          INSTANCE_TYPE: ${{ secrets.INSTANCE_TYPE }}
+          SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
+          AMI_NAME: ${{ secrets.AMI_NAME }}
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        run: |
+          touch test.txt
+          zip webapp.zip test.txt
+          packer validate \
+          -var "aws_region=${AWS_REGION}" \
+          -var "aws_source_ami=${AWS_SOURCE_AMI}" \
+          -var "instance_type=${INSTANCE_TYPE}" \
+          -var "ssh_username=${SSH_USERNAME}" \
+          -var "ami_name=${AMI_NAME}" \
+          -var "mysql_root_password=${MYSQL_ROOT_PASSWORD}" \
+          -var "db_host=${DB_HOST}" \
+          -var "db_name=${DB_NAME}" \
+          -var "db_user=${DB_USER}" \
+          -var "db_password=${DB_PASSWORD}" \
+          ./packer/aws.pkr.hcl
