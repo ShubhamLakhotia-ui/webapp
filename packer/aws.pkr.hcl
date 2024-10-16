@@ -12,7 +12,7 @@ variable "aws_region" {
   default = "us-east-1"
 }
 
-variable "source_ami" {
+variable "aws_source_ami" {
   type    = string
   default = "ami-0866a3c8686eaeeba"
 }
@@ -69,7 +69,7 @@ variable "db_password" {
 
 source "amazon-ebs" "ubuntu" {
   region          = var.aws_region
-  source_ami      = var.source_ami
+  aws_source_ami      = var.aws_source_ami
   instance_type   = var.instance_type
   ssh_username    = var.ssh_username
   ami_name        = var.ami_name
