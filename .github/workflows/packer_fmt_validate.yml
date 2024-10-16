@@ -48,7 +48,6 @@ jobs:
           if [ -z "${AMI_NAME}" ]; then echo "ERROR: AMI_NAME is empty!"; fi
 
       # Step 6: Validate Packer template
-      # Step 6: Validate Packer template
       - name: Run Packer Validate
         env:
           AWS_REGION: ${{ secrets.AWS_REGION }}
@@ -56,11 +55,23 @@ jobs:
           INSTANCE_TYPE: ${{ secrets.INSTANCE_TYPE }}
           SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
           AMI_NAME: ${{ secrets.AMI_NAME }}
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
         run: |
-          packer validate -except="file" \
+          touch test.txt
+          zip webapp.zip test.txt
+          packer validate \
           -var "aws_region=${AWS_REGION}" \
           -var "aws_source_ami=${AWS_SOURCE_AMI}" \
           -var "instance_type=${INSTANCE_TYPE}" \
           -var "ssh_username=${SSH_USERNAME}" \
           -var "ami_name=${AMI_NAME}" \
+          -var "mysql_root_password=${MYSQL_ROOT_PASSWORD}" \
+          -var "db_host=${DB_HOST}" \
+          -var "db_name=${DB_NAME}" \
+          -var "db_user=${DB_USER}" \
+          -var "db_password=${DB_PASSWORD}" \
           ./packer/aws.pkr.hcl
