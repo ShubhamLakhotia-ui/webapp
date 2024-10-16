@@ -11,29 +11,47 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # Step 1: Checkout the code
       - name: Checkout Code
         uses: actions/checkout@v2
 
+      # Step 2: Install Packer
       - name: Install Packer
         run: sudo apt-get install -y packer
 
+      # Step 3: Initialize Packer
       - name: Initialize Packer
         run: packer init ./packer/aws.pkr.hcl
 
+      # Step 4: Format check using Packer fmt
       - name: Run Packer Fmt
         run: packer fmt -check -diff ./packer/aws.pkr.hcl
 
-      - name: Run Packer Validate
-
+      # Step 5: Echo the environment variables for debugging
+      - name: Echo Environment Variables
         env:
           AWS_REGION: ${{ secrets.AWS_REGION }}
           AWS_SOURCE_AMI: ${{ secrets.AWS_SOURCE_AMI }}
           INSTANCE_TYPE: ${{ secrets.INSTANCE_TYPE }}
           SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
           AMI_NAME: ${{ secrets.AMI_NAME }}
-
         run: |
-          packer init \
+          echo "AWS_REGION=${AWS_REGION}"
+          echo "AWS_SOURCE_AMI=${AWS_SOURCE_AMI}"
+          echo "INSTANCE_TYPE=${INSTANCE_TYPE}"
+          echo "SSH_USERNAME=${SSH_USERNAME}"
+          echo "AMI_NAME=${AMI_NAME}"
+
+      # Step 6: Validate Packer template
+      - name: Run Packer Validate
+        env:
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          AWS_SOURCE_AMI: ${{ secrets.AWS_SOURCE_AMI }}
+          INSTANCE_TYPE: ${{ secrets.INSTANCE_TYPE }}
+          SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
+          AMI_NAME: ${{ secrets.AMI_NAME }}
+        run: |
+          packer validate \
           -var "aws_region=${AWS_REGION}" \
           -var "aws_source_ami=${AWS_SOURCE_AMI}" \
           -var "instance_type=${INSTANCE_TYPE}" \
