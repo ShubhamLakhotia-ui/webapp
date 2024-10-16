@@ -69,7 +69,7 @@ variable "db_password" {
 
 source "amazon-ebs" "ubuntu" {
   region          = var.aws_region
-  source_ami  = var.aws_source_ami
+  source_ami      = var.aws_source_ami
   instance_type   = var.instance_type
   ssh_username    = var.ssh_username
   ami_name        = var.ami_name
