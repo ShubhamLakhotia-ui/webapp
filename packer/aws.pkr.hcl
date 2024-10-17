@@ -95,7 +95,7 @@ source "amazon-ebs" "ubuntu" {
     max_attempts  = 50
   }
 
-  ami_user = ["${var.demo_account_id}"]
+  ami_users = ["${var.demo_account_id}"]
 }
 
 build {
