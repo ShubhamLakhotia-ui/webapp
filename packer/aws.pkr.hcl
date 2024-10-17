@@ -66,8 +66,8 @@ variable "db_user" {
 variable "db_password" {
   type = string
 }
-variable "demo_account_id"{
-  type=number
+variable "demo_account_id" {
+  type = number
 }
 
 source "amazon-ebs" "ubuntu" {
@@ -95,7 +95,7 @@ source "amazon-ebs" "ubuntu" {
     max_attempts  = 50
   }
 
-  ami_user=["${var.demo_account_id}"]
+  ami_user = ["${var.demo_account_id}"]
 }
 
 build {
