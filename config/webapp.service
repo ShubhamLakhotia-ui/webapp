@@ -3,11 +3,11 @@ Description=Web Application Service
 After=network.target
 
 [Service]
-ExecStart=/usr/bin/node /opt/webapp/connection.js  
-Restart=always                                 
-User=csye6225                                
-Group=csye6225                                
-EnvironmentFile=/etc/webapp.env                
+ExecStart=/usr/bin/node /opt/webapp/connection.js 
+Restart=on-failure
+User=csye6225
+Group=csye6225
+EnvironmentFile=/etc/webapp.env
 
 [Install]
 WantedBy=multi-user.target
