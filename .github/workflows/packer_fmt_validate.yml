@@ -75,5 +75,5 @@ jobs:
           -var "db_name=${DB_NAME}" \
           -var "db_user=${DB_USER}" \
           -var "db_password=${DB_PASSWORD}" \
-          -var "demo_account_id"=${DEMO_ACCOUNT_ID}" \
+          -var "demo_account_id=${DEMO_ACCOUNT_ID}" \
           ./packer/aws.pkr.hcl
