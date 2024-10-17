@@ -44,7 +44,7 @@ const authenticate = async (req, res, next) => {
     const user = await User.findOne({ where: { email: credentials.name } });
 
     if (!user || !(await bcrypt.compare(credentials.pass, user.password))) {
-      return res.status(400).send("Invalid credentials");
+      return res.status(401).send("Invalid credentials");
     }
 
     req.user = user;
@@ -56,10 +56,22 @@ const authenticate = async (req, res, next) => {
 
 app.post("/v1/user", async (req, res) => {
   const { first_name, last_name, email, password } = req.body;
-
+  if (!first_name || !last_name || !email || !password) {
+    return res.status(400).json({
+      error:
+        "All fields are required: first_name, last_name, email, and password.",
+    });
+  }
   try {
     if ("account_created" in req.body || "account_updated" in req.body) {
       return res.status(400).end();
+    }
+    const passwordRegex = /^(?=.*[A-Z])(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,}$/;
+    if (!passwordRegex.test(password)) {
+      return res.status(400).json({
+        message:
+          "Password must be at least 8 characters long, contain at least one uppercase letter, and one special character.",
+      });
     }
     const hashedPassword = await bcrypt.hash(password, 12);
 
@@ -86,7 +98,7 @@ app.post("/v1/user", async (req, res) => {
     if (error.name === "SequelizeUniqueConstraintError") {
       return res.status(400).json({ error: "Email already exists" });
     }
-    return res.status(500).json({ error: "Internal Server Error" });
+    return res.status(503).end();
   }
 });
 
@@ -124,7 +136,9 @@ app.get("/v1/user/self", authenticate, async (req, res) => {
 app.put("/v1/user/self", authenticate, async (req, res) => {
   const { first_name, last_name, email, password } = req.body;
   const user = req.user;
-
+  if ("account_created" in req.body || "account_updated" in req.body) {
+    return res.status(400).end();
+  }
   if (email && email !== user.email) {
     return res.status(400).end();
   }
@@ -133,10 +147,12 @@ app.put("/v1/user/self", authenticate, async (req, res) => {
     return res.status(400).end();
   }
 
-  if (!first_name && !last_name && !password) {
-    return res.status(400).end();
+  if (!first_name || !last_name || !email || !password) {
+    return res.status(400).json({
+      error:
+        "All fields are required: first_name, last_name, email, and password.",
+    });
   }
-
   const updatedUser = {};
   if (first_name) {
     updatedUser.first_name = first_name;

@@ -66,6 +66,9 @@ variable "db_user" {
 variable "db_password" {
   type = string
 }
+variable "demo_account_id"{
+  type=number
+}
 
 source "amazon-ebs" "ubuntu" {
   region          = var.aws_region
@@ -91,6 +94,8 @@ source "amazon-ebs" "ubuntu" {
     delay_seconds = 120
     max_attempts  = 50
   }
+
+  ami_user=["${var.demo_account_id}"]
 }
 
 build {
