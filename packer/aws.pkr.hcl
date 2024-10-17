@@ -67,7 +67,7 @@ variable "db_password" {
   type = string
 }
 variable "demo_account_id" {
-  type = number
+  type = string
 }
 
 source "amazon-ebs" "ubuntu" {
