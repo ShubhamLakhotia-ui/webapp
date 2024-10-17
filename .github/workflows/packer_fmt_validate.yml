@@ -60,6 +60,7 @@ jobs:
           DB_NAME: ${{ secrets.DB_NAME }}
           DB_USER: ${{ secrets.DB_USER }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DEMO_ACCOUNT_ID: ${{secrets.DEMO_ACCOUNT_ID}}
         run: |
           touch test.txt
           zip webapp.zip test.txt
@@ -74,4 +75,5 @@ jobs:
           -var "db_name=${DB_NAME}" \
           -var "db_user=${DB_USER}" \
           -var "db_password=${DB_PASSWORD}" \
+          -var "demo_account_id=${DEMO_ACCOUNT_ID}" \
           ./packer/aws.pkr.hcl
