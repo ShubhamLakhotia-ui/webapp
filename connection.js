@@ -212,7 +212,7 @@ db.sequelize
     });
   })
   .catch((error) => {
-    // console.error("Failed to sync database:", error);
+    console.error("Failed to sync database:", error);
   });
 
 module.exports = app;
