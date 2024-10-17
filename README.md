@@ -26,3 +26,5 @@ Created two middlewares for checking db connection and auth
 
 Added webapp.yml and created mock of database
 Updated yml files
+
+Added packer files named as aws.pkr.hcl
