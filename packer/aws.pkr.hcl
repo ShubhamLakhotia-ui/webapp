@@ -7,7 +7,7 @@ packer {
   }
 }
 
-  variable "aws_region" {
+variable "aws_region" {
   type    = string
   default = "us-east-1"
 }
@@ -71,7 +71,7 @@ variable "demo_account_id" {
 }
 
 source "amazon-ebs" "ubuntu" {
-  region          = var.aws_region
+  region          = varr.aws_region
   source_ami      = var.aws_source_ami
   instance_type   = var.instance_type
   ssh_username    = var.ssh_username
