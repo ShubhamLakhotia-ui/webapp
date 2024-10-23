@@ -71,7 +71,7 @@ variable "demo_account_id" {
 }
 
 source "amazon-ebs" "ubuntu" {
-  region          = varr.aws_region
+  region          = var.aws_region
   source_ami      = var.aws_source_ami
   instance_type   = var.instance_type
   ssh_username    = var.ssh_username
