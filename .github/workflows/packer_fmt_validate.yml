@@ -55,11 +55,6 @@ jobs:
           INSTANCE_TYPE: ${{ secrets.INSTANCE_TYPE }}
           SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
           AMI_NAME: ${{ secrets.AMI_NAME }}
-          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
-          DB_HOST: ${{ secrets.DB_HOST }}
-          DB_NAME: ${{ secrets.DB_NAME }}
-          DB_USER: ${{ secrets.DB_USER }}
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           DEMO_ACCOUNT_ID: ${{secrets.DEMO_ACCOUNT_ID}}
         run: |
           touch test.txt
@@ -70,10 +65,5 @@ jobs:
           -var "instance_type=${INSTANCE_TYPE}" \
           -var "ssh_username=${SSH_USERNAME}" \
           -var "ami_name=${AMI_NAME}" \
-          -var "mysql_root_password=${MYSQL_ROOT_PASSWORD}" \
-          -var "db_host=${DB_HOST}" \
-          -var "db_name=${DB_NAME}" \
-          -var "db_user=${DB_USER}" \
-          -var "db_password=${DB_PASSWORD}" \
           -var "demo_account_id=${DEMO_ACCOUNT_ID}" \
           ./packer/aws.pkr.hcl
