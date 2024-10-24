@@ -81,6 +81,7 @@ source "amazon-ebs" "ubuntu" {
 
 build {
   sources = ["source.amazon-ebs.ubuntu"]
+  
   provisioner "shell" {
     script = "scripts/installation_script.sh"
   }

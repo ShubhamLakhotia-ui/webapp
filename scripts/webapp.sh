@@ -42,17 +42,26 @@ sudo chown -R csye6225:csye6225 /opt/webapp  # Ensure csye6225 owns all files
 # Navigate to the application directory and install npm dependencies if package.json is present
 cd /opt/webapp
 if [ -f "package.json" ]; then
+    echo "package.json found, running npm install..."
     sudo -u csye6225 npm install  # Run npm install as csye6225
+    if [ $? -eq 0 ]; then
+        echo "npm install completed successfully."
+    else
+        echo "npm install failed!" >&2
+        exit 1
+    fi
 else
-    echo "package.json not found, skipping npm install"
+    echo "package.json not found, skipping npm install."
 fi
 
+# Copy systemd service file if it exists and set permissions
 SERVICE_FILE="/tmp/webapp/config/webapp.service"
 if [ -f "$SERVICE_FILE" ]; then
     sudo cp "$SERVICE_FILE" /etc/systemd/system/
     sudo chown root:root /etc/systemd/system/webapp.service
+    echo "webapp.service copied to /etc/systemd/system/"
 else
-    echo "webapp.service not found!"
+    echo "webapp.service not found!" >&2
     exit 1
 fi
 
