@@ -28,3 +28,7 @@ Added webapp.yml and created mock of database
 Updated yml files
 
 Added packer files named as aws.pkr.hcl
+
+## Assignment 5
+
+Updated scripts to remove database
