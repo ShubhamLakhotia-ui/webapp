@@ -47,25 +47,6 @@ variable "volume_type" {
   default = "gp2"
 }
 
-variable "mysql_root_password" {
-  type = string
-}
-
-variable "db_host" {
-  type = string
-}
-
-variable "db_name" {
-  type = string
-}
-
-variable "db_user" {
-  type = string
-}
-
-variable "db_password" {
-  type = string
-}
 variable "demo_account_id" {
   type = string
 }
@@ -100,11 +81,15 @@ source "amazon-ebs" "ubuntu" {
 
 build {
   sources = ["source.amazon-ebs.ubuntu"]
+  provisioner "shell" {
+    script = "scripts/installation_script.sh"
+  }
 
   provisioner "shell" {
     inline = [
       "sudo mkdir -p /tmp/webapp",
-      "sudo chmod 777 /tmp/webapp"
+      "sudo chmod 775 /tmp/webapp",
+      "sudo chown -R csye6225:csye6225 /tmp/webapp"
     ]
   }
 
@@ -115,46 +100,17 @@ build {
 
   provisioner "shell" {
     inline = [
-      "sudo apt-get update",
-      "sudo apt-get install -y mysql-server",
-      "sudo systemctl enable mysql",
-      "sudo systemctl start mysql",
-      "sudo apt-get install -y nodejs npm",
-      "sudo apt-get install -y unzip"
-    ]
-  }
-
-  provisioner "shell" {
-    inline = [
       "cd /tmp",
-      "unzip -o webapp.zip -d /tmp/webapp"
+      "sudo unzip -o webapp.zip -d /tmp/webapp",
+      "sudo chown -R csye6225:csye6225 /tmp/webapp"
     ]
   }
 
   provisioner "shell" {
-    environment_vars = [
-      "MYSQL_ROOT_PASSWORD=${var.mysql_root_password}",
-      "DB_HOST=${var.db_host}",
-      "DB_NAME=${var.db_name}",
-      "DB_USER=${var.db_user}",
-      "DB_PASSWORD=${var.db_password}"
-    ]
-    inline = [
-      "cd /tmp/webapp/scripts",
-      "sudo -E bash setup_mysql.sh"
-    ]
+    script = "scripts/webapp.sh"
+  }
+  post-processor "manifest" {
+    output = "manifest.json"
   }
 
-  provisioner "shell" {
-    environment_vars = [
-      "DB_HOST=${var.db_host}",
-      "DB_NAME=${var.db_name}",
-      "DB_USER=${var.db_user}",
-      "DB_PASSWORD=${var.db_password}"
-    ]
-    inline = [
-      "cd /tmp/webapp/scripts",
-      "sudo -E bash webapp.sh"
-    ]
-  }
 }
