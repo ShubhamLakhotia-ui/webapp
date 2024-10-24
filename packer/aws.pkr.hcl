@@ -107,7 +107,7 @@ build {
   }
 
   provisioner "shell" {
-    script = "scripts/webapp_setup.sh"
+    script = "scripts/webapp.sh"
   }
   post-processor "manifest" {
     output = "manifest.json"
