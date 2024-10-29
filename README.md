@@ -31,4 +31,4 @@ Added packer files named as aws.pkr.hcl
 
 ## Assignment 5
 
-Updated scripts to remove databases
+Updated scripts to remove databases.
