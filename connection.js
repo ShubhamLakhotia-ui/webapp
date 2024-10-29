@@ -3,10 +3,12 @@ const mysql = require("mysql");
 const bcrypt = require("bcrypt");
 const PORT = 4200;
 const dotenv = require("dotenv");
-
+const multer = require("multer");
 const db = require("./models");
+const path = require("path");
+const fs = require("fs");
 const basicAuth = require("basic-auth");
-const { User } = require("./models");
+const { User, Image } = require("./models");
 dotenv.config();
 
 const app = express();
@@ -32,6 +34,7 @@ app.head("/healthz", (req, res) => {
 app.head("/v1/user/self", (req, res) => {
   res.status(405).send();
 });
+
 const authenticate = async (req, res, next) => {
   const credentials = basicAuth(req);
   console.log("Credentials", credentials);
@@ -53,6 +56,66 @@ const authenticate = async (req, res, next) => {
     res.status(500).send("Internal Server Error");
   }
 };
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadDir = path.join(__dirname, "uploads");
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir);
+    }
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const userId = req.user ? req.user.id : "guest";
+    const fileName = `${userId}-${Date.now()}-${file.originalname}`;
+    cb(null, fileName);
+  },
+});
+const upload = multer({ storage });
+
+app.post(
+  "/v1/user/self/pic",
+  authenticate,
+  upload.single("profilePic"),
+  async (req, res) => {
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
+
+    const userId = req.user.id;
+
+    try {
+      const existingImage = await Image.findOne({ where: { user_id: userId } });
+
+      if (existingImage) {
+        return res
+          .status(400)
+          .json({ message: "Profile picture already exists for this user." });
+      }
+
+      // Create a new image record
+      const fileName = req.file.filename;
+      const filePath = path.join("uploads", fileName);
+      const image = await Image.create({
+        file_name: fileName,
+        url: filePath,
+        upload_date: new Date(),
+        user_id: userId,
+      });
+
+      res.status(201).json({
+        file_name: image.file_name,
+        id: image.id,
+        url: image.url,
+        upload_date: image.upload_date,
+        user_id: image.user_id,
+      });
+    } catch (error) {
+      console.error("Error saving image:", error);
+      res.status(500).json({ message: "Error saving image" });
+    }
+  }
+);
 
 app.post("/v1/user", async (req, res) => {
   const { first_name, last_name, email, password } = req.body;
