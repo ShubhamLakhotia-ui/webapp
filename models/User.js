@@ -64,5 +64,9 @@ module.exports = (sequelize, DataTypes) => {
     { timestamps: false }
   );
 
+  User.associate = (models) => {
+    User.hasOne(models.Image, { foreignKey: "user_id", as: "profileImage" });
+  };
+
   return User;
 };
