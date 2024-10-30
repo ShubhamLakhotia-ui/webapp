@@ -297,23 +297,51 @@
 // module.exports = app;
 
 const express = require("express");
-const mysql = require("mysql");
+const StatsD = require("node-statsd");
 const bcrypt = require("bcrypt");
-const PORT = 4100;
 const dotenv = require("dotenv");
 const multer = require("multer");
 const AWS = require("aws-sdk");
 const db = require("./models");
 const basicAuth = require("basic-auth");
 const { User, Image } = require("./models");
+
 dotenv.config();
 
 const app = express();
-app.use(express.json());
+const PORT = 4100;
+
+// StatsD client for logging metrics
+const client = new StatsD();
 
 // Initialize AWS SDK for S3
 const s3 = new AWS.S3({ region: process.env.AWS_REGION });
 const s3BucketName = process.env.S3_BUCKET_NAME;
+
+app.use(express.json());
+
+// Middleware for logging API metrics
+const logApiMetrics = (req, res, next) => {
+  const startTime = Date.now();
+
+  res.on("finish", () => {
+    const duration = Date.now() - startTime;
+
+    // Log API call count and duration to StatsD
+    client.increment(
+      `api.${req.method}.${req.originalUrl.replace(/\//g, "_")}`
+    );
+    client.timing(
+      `api.${req.method}.${req.originalUrl.replace(/\//g, "_")}.duration`,
+      duration
+    );
+  });
+
+  next();
+};
+
+// Apply middleware globally to track metrics
+app.use(logApiMetrics);
 
 // Database connection check middleware
 const checkdbConnection = async (req, res, next) => {
@@ -363,7 +391,6 @@ const storage = multer.memoryStorage();
 const upload = multer({
   storage,
   fileFilter: (req, file, cb) => {
-    // Allowed MIME types
     const allowedMimeTypes = ["image/jpeg", "image/jpg", "image/png"];
     if (allowedMimeTypes.includes(file.mimetype)) {
       cb(null, true);
@@ -423,7 +450,7 @@ app.post(
       // Save image record in the database
       const image = await Image.create({
         file_name: fileName,
-        url: s3Response.Location, // URL from S3 response
+        url: s3Response.Location,
         upload_date: new Date(),
         user_id: userId,
       });
@@ -531,6 +558,17 @@ app.get("/v1/user/self", authenticate, async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+app.get("/healthz", async (req, res) => {
+  res.setHeader("Cache-Control", "no-cache");
+
+  try {
+    await db.sequelize.authenticate();
+    return res.status(200).end();
+  } catch (error) {
+    return res.status(503).end();
   }
 });
 
