@@ -56,6 +56,10 @@ app.head("/v1/user/self", (req, res) => {
   res.status(405).send();
 });
 
+app.head("/v1/user/self/pic", (req, res) => {
+  res.status(405).send();
+});
+
 // Basic Authentication middleware
 const authenticate = async (req, res, next) => {
   const credentials = basicAuth(req);
