@@ -26,8 +26,13 @@ const logApiMetrics = (req, res, next) => {
   const startTime = Date.now();
   res.on("finish", () => {
     const duration = Date.now() - startTime;
-    client.increment(`api.${req.method}.${req.originalUrl}`);
-    client.timing(`⁠ api.${req.method}.${req.originalUrl}.duration`, duration);
+    client.increment(
+      `api.${req.method}.${req.originalUrl.replace(/\//g, "_")}`
+    );
+    client.timing(
+      `api.${req.method}.${req.originalUrl.replace(/\//g, "_")}.duration`,
+      duration
+    );
   });
   next();
 };
@@ -76,7 +81,8 @@ const authenticate = async (req, res, next) => {
   }
 };
 
-// Configure multer to store file in memory and allow only specific image formats
+// Configure multer to store file in memory and allow only specific image format
+
 const storage = multer.memoryStorage();
 const upload = multer({
   storage,
@@ -85,11 +91,11 @@ const upload = multer({
     if (allowedMimeTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(
-        new Error("Invalid file type. Only JPG, JPEG, and PNG are allowed."),
-        false
-      );
+      cb(new Error("Invalid file type. Only JPG, JPEG, and PNG are allowed."));
     }
+  },
+  limits: {
+    files: 1, // Only one file allowed at a time
   },
 });
 
@@ -100,61 +106,178 @@ const uploadImageToS3 = async (fileBuffer, fileName, userId, mimeType) => {
     Key: `${userId}/${fileName}`,
     Body: fileBuffer,
     ContentType: mimeType,
-    Metadata: { uploadedBy: userId.toString() },
+    Metadata: {
+      uploadedBy: userId.toString(),
+      fileType: mimeType,
+      uploadDate: new Date().toISOString,
+    },
   };
   return s3.upload(params).promise();
 };
 
+app.get("/v1/user/self/pic", authenticate, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const image = await db.Image.findOne({ where: { user_id: userId } });
+    if (!image)
+      return res.status(404).json({ error: "No profile picture found." });
+
+    res.status(200).json({
+      file_name: image.file_name,
+      id: userId,
+      url: image.url,
+      upload_date: image.upload_date,
+      user_id: userId,
+      metadata: JSON.parse(image.metadata), // Parse JSON metadata
+    });
+  } catch (error) {
+    console.error("Error retrieving profile picture:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
 // Profile picture upload route
+// app.post(
+//   "/v1/user/self/pic",
+//   authenticate,
+//   upload.single("profilePic"),
+//   async (req, res) => {
+//     if (!req.file) {
+//       return res
+//         .status(400)
+//         .json({ message: "No file uploaded or unsupported file format." });
+//     }
+
+//     const userId = req.user.id;
+
+//     try {
+//       const existingImage = await Image.findOne({ where: { user_id: userId } });
+
+//       if (existingImage) {
+//         return res
+//           .status(400)
+//           .json({ message: "Profile picture already exists for this user." });
+//       }
+//       const fileType = req.file.mimetype;
+//       const validMimeTypes = ["image/png", "image/jpeg", "image/jpg"];
+
+//       if (!validMimeTypes.includes(fileType)) {
+//         return res.status(400).json({
+//           error: "Only .png, .jpg, and .jpeg files are supported.",
+//         });
+//       }
+//       const imageUrl = `${s3BucketName}/${userId}/${req.file.originalname}`;
+//       const metadata = JSON.stringify({
+//         uploadedBy: userId,
+//         uploadDate,
+//         fileType: req.file.mimetype,
+//       });
+
+//       // Upload image to S3
+//       const fileName = req.file.originalname;
+//       const s3Response = await uploadImageToS3(
+//         req.file.buffer,
+//         fileName,
+//         userId,
+//         req.file.mimetype
+//       );
+
+//       // Save image record in the database
+//       const image = await Image.create({
+//         file_name: fileName,
+//         url: imageUrl,
+//         upload_date: new Date(),
+//         user_id: userId,
+//         metadata,
+//       });
+
+//       res.status(201).json({
+//         file_name: image.file_name,
+//         id: image.id,
+//         url: image.url,
+//         upload_date: image.upload_date,
+//         user_id: image.user_id,
+//       });
+//     } catch (error) {
+//       console.error("Error uploading file:", error);
+//       if (error.message.includes("Invalid file type")) {
+//         return res.status(400).json({ error: error.message });
+//       }
+//       next(error);
+//     }
+//   }
+// );
+
 app.post(
   "/v1/user/self/pic",
   authenticate,
   upload.single("profilePic"),
-  async (req, res) => {
-    if (!req.file) {
-      return res
-        .status(400)
-        .json({ message: "No file uploaded or unsupported file format." });
-    }
-
-    const userId = req.user.id;
-
+  async (req, res, next) => {
     try {
-      const existingImage = await Image.findOne({ where: { user_id: userId } });
-
-      if (existingImage) {
-        return res
-          .status(400)
-          .json({ message: "Profile picture already exists for this user." });
+      if (!req.file) {
+        // This message will be shown if no file was uploaded
+        return res.status(400).json({ error: "No file uploaded." });
       }
 
-      // Upload image to S3
+      const fileType = req.file.mimetype;
+      const validMimeTypes = ["image/png", "image/jpeg", "image/jpg"];
+
+      if (!validMimeTypes.includes(fileType)) {
+        return res.status(400).json({
+          error: "Only .png, .jpg, and .jpeg files are supported.",
+        });
+      }
+
+      const userId = req.user.id;
+
+      // Check if a profile picture already exists
+      const existingImage = await db.Image.findOne({
+        where: { user_id: userId },
+      });
+      if (existingImage) {
+        return res.status(400).json({
+          error:
+            "A profile picture already exists. Delete it to upload a new one.",
+        });
+      }
+
       const fileName = req.file.originalname;
+      const uploadDate = new Date().toISOString();
+
+      const imageUrl = `${s3BucketName}/${userId}/${fileName}`;
+      const metadata = JSON.stringify({
+        uploadedBy: userId,
+        uploadDate,
+        fileType: req.file.mimetype,
+      });
       const s3Response = await uploadImageToS3(
         req.file.buffer,
         fileName,
         userId,
         req.file.mimetype
       );
-
-      // Save image record in the database
-      const image = await Image.create({
+      // Save metadata to MySQL
+      const image = await db.Image.create({
         file_name: fileName,
-        url: s3Response.Location,
-        upload_date: new Date(),
+        url: imageUrl,
+        upload_date: uploadDate,
         user_id: userId,
+        metadata,
       });
 
       res.status(201).json({
-        file_name: image.file_name,
+        file_name: fileName,
         id: image.id,
-        url: image.url,
-        upload_date: image.upload_date,
-        user_id: image.user_id,
+        url: imageUrl,
+        upload_date: uploadDate,
+        user_id: image.userId,
       });
     } catch (error) {
-      console.error("Error uploading image:", error);
-      res.status(500).json({ message: "Error uploading image" });
+      console.error("Error uploading file:", error);
+      if (error.message.includes("Invalid file type")) {
+        return res.status(400).json({ error: error.message });
+      }
+      next(error);
     }
   }
 );
@@ -262,6 +385,35 @@ app.get("/healthz", async (req, res) => {
   }
 });
 
+app.all("/healthz", (req, res) => {
+  res.set("Cache-Control", "no-cache");
+  res.status(405).send();
+});
+
+app.options("/v1/user/self/pic", (req, res) => {
+  res.status(405).send();
+});
+
+app.patch("/v1/user/self/pic", (req, res) => {
+  res.status(405).send();
+});
+
+app.put("/v1/user/self/pic", (req, res) => {
+  res.status(405).send();
+});
+
+app.delete("/v1/user/self", (req, res) => {
+  res.status(405).send();
+});
+
+app.options("/v1/user/self", (req, res) => {
+  res.status(405).send();
+});
+
+app.patch("/v1/user/self", (req, res) => {
+  res.status(405).send();
+});
+
 // Start Server
 db.sequelize
   .sync()
@@ -273,5 +425,21 @@ db.sequelize
   .catch((error) => {
     console.error("Failed to sync database:", error);
   });
+
+app.use((err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    if (err.code === "LIMIT_FILE_COUNT") {
+      return res
+        .status(400)
+        .json({ error: "Only one file can be uploaded at a time." });
+    }
+    return res.status(400).json({ error: err.message });
+  } else if (
+    err.message === "Invalid file type. Only JPG, JPEG, and PNG are allowed."
+  ) {
+    return res.status(400).json({ error: err.message });
+  }
+  res.status(500).json({ error: "Internal Server Error" });
+});
 
 module.exports = app;
