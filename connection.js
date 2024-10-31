@@ -239,13 +239,13 @@ app.post(
       const uploadDate = new Date().toISOString();
 
       const imageUrl = `${s3BucketName}/${userId}/${fileName}`;
-      // const s3Response = await uploadImageToS3(
-      //   req.file.buffer,
-      //   fileName,
-      //   userId,
-      //   req.file.mimetype
-      // );
-      // Save metadata to MySQL
+      const s3Response = await uploadImageToS3(
+        req.file.buffer,
+        fileName,
+        userId,
+        req.file.mimetype
+      );
+
       const image = await db.Image.create({
         file_name: fileName,
         url: imageUrl,
