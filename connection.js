@@ -22,27 +22,17 @@ const s3BucketName = process.env.S3_BUCKET_NAME;
 
 app.use(express.json());
 
-// Middleware for logging API metrics
 const logApiMetrics = (req, res, next) => {
   const startTime = Date.now();
-
   res.on("finish", () => {
     const duration = Date.now() - startTime;
-
-    // Log API call count and duration to StatsD
-    client.increment(
-      `api.${req.method}.${req.originalUrl.replace(/\//g, "_")}`
-    );
-    client.timing(
-      `api.${req.method}.${req.originalUrl.replace(/\//g, "_")}.duration`,
-      duration
-    );
+    client.increment(`api.${req.method}.${req.originalUrl}`);
+    client.timing(`⁠ api.${req.method}.${req.originalUrl}.duration`, duration);
   });
-
   next();
 };
+app.use(logApiMetrics);
 
-// Apply middleware globally to track metrics
 app.use(logApiMetrics);
 
 // Database connection check middleware
