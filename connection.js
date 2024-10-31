@@ -33,8 +33,6 @@ const logApiMetrics = (req, res, next) => {
 };
 app.use(logApiMetrics);
 
-app.use(logApiMetrics);
-
 // Database connection check middleware
 const checkdbConnection = async (req, res, next) => {
   try {

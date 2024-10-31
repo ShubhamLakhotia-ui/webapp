@@ -3,7 +3,7 @@
 # Update package list and install necessary packages
 sudo apt-get update -y
 sudo apt-get install -y nodejs npm
-sudo apt-get install -y unzip
+sudo apt-get install -y unzip curl
 
 curl -O https://s3.amazonaws.com/amazoncloudwatch-agent/ubuntu/amd64/latest/amazon-cloudwatch-agent.deb
 sudo dpkg -i -E ./amazon-cloudwatch-agent.deb
@@ -13,7 +13,7 @@ sudo dpkg -i -E ./amazon-cloudwatch-agent.deb
 rm amazon-cloudwatch-agent.deb
 sudo mkdir -p /opt/aws/amazon-cloudwatch-agent/etc/
 
- cat << 'EOF' | sudo tee /opt/aws/amazon-cloudwatch-agent/etc/cwagent-config.json
+ cat << 'EOF' | sudo tee /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
 {
     "agent": {
         "metrics_collection_interval": 10,
