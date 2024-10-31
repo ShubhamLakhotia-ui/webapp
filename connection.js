@@ -26,13 +26,8 @@ const logApiMetrics = (req, res, next) => {
   const startTime = Date.now();
   res.on("finish", () => {
     const duration = Date.now() - startTime;
-    client.increment(
-      `api.${req.method}.${req.originalUrl.replace(/\//g, "_")}`
-    );
-    client.timing(
-      `api.${req.method}.${req.originalUrl.replace(/\//g, "_")}.duration`,
-      duration
-    );
+    client.increment(`api.${req.method}.${req.originalUrl}`);
+    client.timing(`api.${req.method}.${req.originalUrl}.duration`, duration);
   });
   next();
 };
@@ -244,12 +239,12 @@ app.post(
       const uploadDate = new Date().toISOString();
 
       const imageUrl = `${s3BucketName}/${userId}/${fileName}`;
-      const s3Response = await uploadImageToS3(
-        req.file.buffer,
-        fileName,
-        userId,
-        req.file.mimetype
-      );
+      // const s3Response = await uploadImageToS3(
+      //   req.file.buffer,
+      //   fileName,
+      //   userId,
+      //   req.file.mimetype
+      // );
       // Save metadata to MySQL
       const image = await db.Image.create({
         file_name: fileName,
