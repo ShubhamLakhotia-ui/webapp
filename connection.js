@@ -109,7 +109,7 @@ const uploadImageToS3 = async (fileBuffer, fileName, userId, mimeType) => {
     Metadata: {
       uploadedBy: userId.toString(),
       fileType: mimeType,
-      uploadDate: new Date().toISOString,
+      uploadDate: new Date().toISOString(),
     },
   };
   return s3.upload(params).promise();
@@ -128,7 +128,6 @@ app.get("/v1/user/self/pic", authenticate, async (req, res) => {
       url: image.url,
       upload_date: image.upload_date,
       user_id: userId,
-      metadata: JSON.parse(image.metadata), // Parse JSON metadata
     });
   } catch (error) {
     console.error("Error retrieving profile picture:", error);
@@ -245,11 +244,6 @@ app.post(
       const uploadDate = new Date().toISOString();
 
       const imageUrl = `${s3BucketName}/${userId}/${fileName}`;
-      const metadata = JSON.stringify({
-        uploadedBy: userId,
-        uploadDate,
-        fileType: req.file.mimetype,
-      });
       const s3Response = await uploadImageToS3(
         req.file.buffer,
         fileName,
@@ -262,7 +256,6 @@ app.post(
         url: imageUrl,
         upload_date: uploadDate,
         user_id: userId,
-        metadata,
       });
 
       res.status(201).json({
