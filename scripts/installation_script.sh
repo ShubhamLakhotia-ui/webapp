@@ -19,7 +19,9 @@ sudo dpkg -i -E ./amazon-cloudwatch-agent.deb
 
 # Clean up the downloaded .deb file
 rm amazon-cloudwatch-agent.deb
-sudo touch /var/log/webapp.log
-sudo chmod 644 /var/log/webapp.log
-sudo chown root:root /var/log/webapp.log
+
+
+sudo chown -R csye6225:csye6225 /opt/aws/amazon-cloudwatch-agent/etc
+sudo chmod 775 /opt/aws/amazon-cloudwatch-agent/etc
+
 echo "Installation script completed successfully."
