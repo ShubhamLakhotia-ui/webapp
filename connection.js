@@ -262,7 +262,7 @@ app.post(
         id: image.id,
         url: imageUrl,
         upload_date: uploadDate,
-        user_id: image.userId,
+        user_id: userId,
       });
     } catch (error) {
       console.error("Error uploading file:", error);
