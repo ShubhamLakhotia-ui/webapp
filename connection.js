@@ -6,7 +6,7 @@ const multer = require("multer");
 const AWS = require("aws-sdk");
 const db = require("./models");
 const basicAuth = require("basic-auth");
-const { User, Image } = require("./models");
+const { User, Image, Token } = require("./models");
 
 dotenv.config();
 
@@ -19,6 +19,10 @@ const client = new StatsD();
 // Initialize AWS SDK for S3
 const s3 = new AWS.S3({ region: process.env.AWS_REGION });
 const s3BucketName = process.env.S3_BUCKET_NAME;
+
+const sns = new AWS.SNS({
+  region: process.env.AWS_REGION,
+});
 
 app.use(express.json());
 
@@ -80,6 +84,28 @@ const authenticate = async (req, res, next) => {
   }
 };
 
+const checkVerified = async (req, res, next) => {
+  try {
+    const latestToken = await Token.findOne({
+      where: { user_id: req.user.id },
+      order: [["expires_at", "DESC"]], // Get the most recent token
+    });
+
+    if (!latestToken) {
+      return res.status(403).json({ error: "Verification token not found" });
+    }
+
+    if (!latestToken.verified) {
+      return res.status(403).json({ error: "Email not verified" });
+    }
+
+    next();
+  } catch (error) {
+    console.error("Error checking verification:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
 // Configure multer to store file in memory and allow only specific image format
 
 const storage = multer.memoryStorage();
@@ -114,7 +140,7 @@ const uploadImageToS3 = async (fileBuffer, fileName, userId, mimeType) => {
   return s3.upload(params).promise();
 };
 
-app.get("/v1/user/self/pic", authenticate, async (req, res) => {
+app.get("/v1/user/self/pic", authenticate, checkVerified, async (req, res) => {
   try {
     const userId = req.user.id;
     const image = await db.Image.findOne({ where: { user_id: userId } });
@@ -209,6 +235,7 @@ app.get("/v1/user/self/pic", authenticate, async (req, res) => {
 app.post(
   "/v1/user/self/pic",
   authenticate,
+  checkVerified,
   upload.single("profilePic"),
   async (req, res, next) => {
     try {
@@ -284,27 +311,32 @@ const deleteImageFromS3 = async (key) => {
 };
 
 // Route to delete profile picture from S3 and database
-app.delete("/v1/user/self/pic", authenticate, async (req, res) => {
-  const userId = req.user.id;
+app.delete(
+  "/v1/user/self/pic",
+  authenticate,
+  checkVerified,
+  async (req, res) => {
+    const userId = req.user.id;
 
-  try {
-    const existingImage = await Image.findOne({ where: { user_id: userId } });
-    if (!existingImage) {
-      return res
-        .status(404)
-        .json({ message: "No profile picture found for this user." });
+    try {
+      const existingImage = await Image.findOne({ where: { user_id: userId } });
+      if (!existingImage) {
+        return res
+          .status(404)
+          .json({ message: "No profile picture found for this user." });
+      }
+
+      const imageKey = `${userId}/${existingImage.file_name}`;
+      await deleteImageFromS3(imageKey);
+      await existingImage.destroy();
+
+      res.status(204).end();
+    } catch (error) {
+      console.error("Error deleting image:", error);
+      res.status(500).json({ message: "Error deleting image" });
     }
-
-    const imageKey = `${userId}/${existingImage.file_name}`;
-    await deleteImageFromS3(imageKey);
-    await existingImage.destroy();
-
-    res.status(204).end();
-  } catch (error) {
-    console.error("Error deleting image:", error);
-    res.status(500).json({ message: "Error deleting image" });
   }
-});
+);
 
 // User Registration Endpoint
 app.post("/v1/user", async (req, res) => {
@@ -333,6 +365,27 @@ app.post("/v1/user", async (req, res) => {
       account_created: new Date(),
       account_updated: new Date(),
     });
+
+    const token = crypto.randomBytes(32).toString("hex");
+    const expiresAt = new Date(Date.now() + 2 * 60 * 1000);
+
+    await Token.create({ token, expires_at: expiresAt, user_id: user.id });
+    const verificationLink = `https://${process.env.DOMAIN_NAME}/verify?token=${token}`;
+
+    console.log("verificationLink", this.verificationLink);
+
+    const message = {
+      email,
+      verification_link: verificationLink,
+    };
+
+    await sns
+      .publish({
+        TopicArn: process.env.SNS_TOPIC_ARN,
+        Message: JSON.stringify(message),
+      })
+      .promise();
+
     res.status(201).json({
       id: user.id,
       first_name: user.first_name,
@@ -349,8 +402,30 @@ app.post("/v1/user", async (req, res) => {
   }
 });
 
+app.get("/verify", async (req, res) => {
+  const { token } = req.query;
+  if (!token) {
+    return res.status(400).json({ error: "Token is required" });
+  }
+
+  try {
+    const tokenRecord = await Token.findOne({ where: { token } });
+    if (!tokenRecord || new Date() > tokenRecord.expires_at) {
+      return res.status(400).json({ error: "Invalid or expired token" });
+    }
+
+    tokenRecord.verified = true;
+    await tokenRecord.save();
+
+    res.status(200).json({ message: "Email verified successfully!" });
+  } catch (error) {
+    console.error("Verification error:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
 // Fetch User Profile Endpoint
-app.get("/v1/user/self", authenticate, async (req, res) => {
+app.get("/v1/user/self", authenticate, checkVerified, async (req, res) => {
   const user = req.user;
   try {
     res.status(200).json({
