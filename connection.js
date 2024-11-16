@@ -372,19 +372,35 @@ app.post("/v1/user", async (req, res) => {
     await Token.create({ token, expires_at: expiresAt, user_id: user.id });
     const verificationLink = `https://${process.env.DOMAIN_NAME}/verify?token=${token}`;
 
-    console.log("verificationLink", this.verificationLink);
+    console.log("verificationLink", verificationLink);
 
     const message = {
       email,
       verification_link: verificationLink,
     };
 
-    await sns
-      .publish({
-        TopicArn: process.env.SNS_TOPIC_ARN,
-        Message: JSON.stringify(message),
-      })
-      .promise();
+    try {
+      await sns
+        .publish({
+          TopicArn: process.env.SNS_TOPIC_ARN,
+          Message: JSON.stringify(message),
+        })
+        .promise();
+    } catch (snsError) {
+      console.error("SNS Publish Error:", snsError); // Logs detailed error
+      return res.status(500).json({
+        error: "Failed to send verification email",
+        details:
+          snsError.message || "An error occurred while publishing to SNS",
+      });
+    }
+
+    // await sns
+    //   .publish({
+    //     TopicArn: process.env.SNS_TOPIC_ARN,
+    //     Message: JSON.stringify(message),
+    //   })
+    //   .promise();
 
     res.status(201).json({
       id: user.id,
