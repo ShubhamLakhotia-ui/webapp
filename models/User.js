@@ -60,12 +60,17 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.DATE,
         defaultValue: DataTypes.NOW, // Automatically set to current timestamp
       },
+      verified: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false, // Default to false, meaning unverified
+      },
     },
     { timestamps: false }
   );
 
   User.associate = (models) => {
     User.hasOne(models.Image, { foreignKey: "user_id", as: "profileImage" });
+    User.hasMany(models.Token, { foreignKey: "user_id", as: "tokens" });
   };
 
   return User;
