@@ -90,3 +90,90 @@ jobs:
           -var "volume_type=${VOLUME_TYPE}" \
           -var "demo_account_id=${DEMO_ACCOUNT_ID}" \
           ./packer/aws.pkr.hcl
+
+      - name: Capture AMI ID
+        id: capture_ami
+        run: |
+          AMI_ID=$(packer build ./packer/aws.pkr.hcl | grep -oP "ami-\w+")
+          if [ -z "$AMI_ID" ]; then
+            echo "Failed to extract AMI ID from Packer output."
+            exit 1
+          fi
+          echo "ami_id=$AMI_ID" >> $GITHUB_ENV
+          echo "Captured AMI ID: $AMI_ID"
+
+  update_asg:
+    name: Update ASG with new AMI
+    runs-on: ubuntu-latest
+    needs: build_ami
+
+    steps:
+      - name: "Configure AWS Credentials for Demo"
+        uses: aws-actions/configure-aws-credentials@v4.0.2
+        with:
+          aws-access-key-id: ${{ secrets.DEMO_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.DEMO_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Get Launch Template ID and create new version
+        run: |
+          # Get Launch Template ID and store it
+          LAUNCH_TEMPLATE_ID=$(aws ec2 describe-launch-templates \
+                  --filters "Name=launch-template-name,Values=${{ secrets.LAUNCH_TEMPLATE_NAME }}" \
+                  --query "LaunchTemplates[0].LaunchTemplateId" \
+                  --output text)
+
+                  echo "LAUNCH_TEMPLATE_ID=${LAUNCH_TEMPLATE_ID}" >> $GITHUB_ENV
+
+                  if [ -z "$LAUNCH_TEMPLATE_ID" ]; then
+                    echo "Failed to get Launch Template ID"
+                    exit 1
+                  fi
+
+                  # Create new version with the new AMI ID
+                  NEW_VERSION=$(aws ec2 create-launch-template-version \
+                  --launch-template-id ${LAUNCH_TEMPLATE_ID} \
+                  --version-description "New version with AMI ${{ env.AMI_ID }}" \
+                  --launch-template-data "ImageId=${{ env.AMI_ID }}" \
+                  --query "LaunchTemplateVersion.VersionNumber" \
+                  --output text)
+
+                  if [ -z "$NEW_VERSION" ]; then
+                    echo "Failed to create new launch template version."
+                    exit 1
+                  fi
+
+                  echo "Created new launch template version: $NEW_VERSION"
+                  echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
+      - name: Update Auto Scaling Group
+        run: |
+          aws autoscaling update-auto-scaling-group \
+            --auto-scaling-group-name ${{ secrets.ASG_NAME }} \
+            --launch-template "LaunchTemplateId=${LAUNCH_TEMPLATE_ID},Version=$NEW_VERSION"
+
+      - name: Trigger Instance Refresh
+        id: refresh_asg
+        run: |
+          REFRESH_ID=$(aws autoscaling start-instance-refresh \
+            --auto-scaling-group-name ${{ secrets.ASG_NAME }} \
+            --preferences '{"MinHealthyPercentage": 100}' \
+            --query "InstanceRefreshId" \
+            --output text)
+          echo "REFRESH_ID=$REFRESH_ID"
+          echo "::set-output name=refresh_id::$REFRESH_ID"
+
+      - name: Wait for Instance Refresh
+        run: |
+          REFRESH_STATUS="InProgress"
+          while [ "$REFRESH_STATUS" == "InProgress" ]; do
+            sleep 30
+            REFRESH_STATUS=$(aws autoscaling describe-instance-refreshes \
+              --auto-scaling-group-name ${{ secrets.ASG_NAME }} \
+              --query "InstanceRefreshes[?InstanceRefreshId=='${{ steps.refresh_asg.outputs.refresh_id }}'].Status" \
+              --output text)
+            echo "Current refresh status: $REFRESH_STATUS"
+          done
+          if [ "$REFRESH_STATUS" != "Successful" ]; then
+            echo "Instance refresh failed with status: $REFRESH_STATUS"
+            exit 1
+          fi
