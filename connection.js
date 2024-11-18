@@ -7,7 +7,7 @@ const AWS = require("aws-sdk");
 const db = require("./models");
 const basicAuth = require("basic-auth");
 const { User, Image, Token } = require("./models");
-
+const crypto = require("crypto");
 dotenv.config();
 
 const app = express();
@@ -370,7 +370,7 @@ app.post("/v1/user", async (req, res) => {
     const expiresAt = new Date(Date.now() + 2 * 60 * 1000);
 
     await Token.create({ token, expires_at: expiresAt, user_id: user.id });
-    const verificationLink = `https://${process.env.DOMAIN_NAME}/verify?token=${token}`;
+    const verificationLink = `http://${process.env.DOMAIN_NAME}/verify?user=${email}&token=${token}`;
 
     console.log("verificationLink", verificationLink);
 
