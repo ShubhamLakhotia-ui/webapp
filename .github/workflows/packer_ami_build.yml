@@ -126,62 +126,74 @@ jobs:
       - name: Get Launch Template ID and create new version
         run: |
           # Get Launch Template ID and store it
-          LAUNCH_TEMPLATE_ID=$(aws ec2 describe-launch-templates \
-                  --filters "Name=launch-template-name,Values=${{ secrets.LAUNCH_TEMPLATE_NAME }}" \
-                  --query "LaunchTemplates[0].LaunchTemplateId" \
-                  --output text)
+           LAUNCH_TEMPLATE_NAME=${{ secrets.LAUNCH_TEMPLATE_NAME }}
+            AMI_ID=${{ needs.build_ami.outputs.ami_id }}
 
-                  echo "LAUNCH_TEMPLATE_ID=${LAUNCH_TEMPLATE_ID}" >> $GITHUB_ENV
+            # Fetch Launch Template ID
+            LAUNCH_TEMPLATE_ID=$(aws ec2 describe-launch-templates \
+              --filters "Name=launch-template-name,Values=${LAUNCH_TEMPLATE_NAME}" \
+              --query "LaunchTemplates[0].LaunchTemplateId" --output text)
 
-                  if [ -z "$LAUNCH_TEMPLATE_ID" ]; then
-                    echo "Failed to get Launch Template ID"
-                    exit 1
-                  fi
+            if [ -z "$LAUNCH_TEMPLATE_ID" ]; then
+              echo "Launch Template not found: ${LAUNCH_TEMPLATE_NAME}"
+              exit 1
+            fi
 
-                  # Create new version with the new AMI ID
-                  NEW_VERSION=$(aws ec2 create-launch-template-version \
-                  --launch-template-id ${LAUNCH_TEMPLATE_ID} \
-                  --version-description "New version with AMI ${{ env.AMI_ID }}" \
-                  --launch-template-data "ImageId=${{ env.AMI_ID }}" \
-                  --query "LaunchTemplateVersion.VersionNumber" \
-                  --output text)
 
-                  if [ -z "$NEW_VERSION" ]; then
-                    echo "Failed to create new launch template version."
-                    exit 1
-                  fi
+            # Create a new Launch Template Version
+            NEW_VERSION=$(aws ec2 create-launch-template-version \
+            --launch-template-id ${LAUNCH_TEMPLATE_ID} \
+            --source-version '$Latest' \
+            --launch-template-data "{\"ImageId\":\"${AMI_ID}\"}" \
+            --query "LaunchTemplateVersion.VersionNumber" --output text)
 
-                  echo "Created new launch template version: $NEW_VERSION"
-                  echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
-      - name: Update Auto Scaling Group
+            if [ -z "$NEW_VERSION" ]; then
+              echo "Failed to create a new Launch Template Version."
+              exit 1
+            fi
+
+            # Update Auto Scaling Group
+            aws autoscaling update-auto-scaling-group \
+              --auto-scaling-group-name ${{ secrets.ASG_NAME }} \
+              --launch-template "LaunchTemplateId=${LAUNCH_TEMPLATE_ID},Version=$NEW_VERSION"
+
+      - name: Start Instance Refresh
         run: |
-          aws autoscaling update-auto-scaling-group \
-            --auto-scaling-group-name ${{ secrets.ASG_NAME }} \
-            --launch-template "LaunchTemplateId=${LAUNCH_TEMPLATE_ID},Version=$NEW_VERSION"
-
-      - name: Trigger Instance Refresh
-        id: refresh_asg
-        run: |
+          echo "Starting Instance Refresh for ASG: ${{ secrets.ASG_NAME }}"
           REFRESH_ID=$(aws autoscaling start-instance-refresh \
             --auto-scaling-group-name ${{ secrets.ASG_NAME }} \
-            --preferences '{"MinHealthyPercentage": 100}' \
-            --query "InstanceRefreshId" \
-            --output text)
-          echo "REFRESH_ID=$REFRESH_ID"
-          echo "::set-output name=refresh_id::$REFRESH_ID"
+            --strategy Rolling \
+                --preferences '{"MinHealthyPercentage": 90, "InstanceWarmup": 300}' \
+                --query "InstanceRefreshId" \
+                --output text)
 
-      - name: Wait for Instance Refresh
+              if [ -z "$REFRESH_ID" ]; then
+                echo "Failed to start instance refresh"
+                exit 1
+              fi
+
+              echo "REFRESH_ID=${REFRESH_ID}" >> $GITHUB_ENV
+
+      - name: Wait for Instance Refresh to Complete
         run: |
-          REFRESH_STATUS="InProgress"
-          while [ "$REFRESH_STATUS" == "InProgress" ]; do
-            sleep 30
-            REFRESH_STATUS=$(aws autoscaling describe-instance-refreshes \
+          while true; do
+            echo "Checking status of Instance Refresh ID: $REFRESH_ID"
+            STATUS=$(aws autoscaling describe-instance-refreshes \
               --auto-scaling-group-name ${{ secrets.ASG_NAME }} \
-              --query "InstanceRefreshes[?InstanceRefreshId=='${{ steps.refresh_asg.outputs.refresh_id }}'].Status" \
+              --instance-refresh-ids ${{ env.REFRESH_ID }} \
+              --query "InstanceRefreshes[0].Status" \
               --output text)
-            echo "Current refresh status: $REFRESH_STATUS"
+
+            echo "Current status: $STATUS"
+
+            if [ "$STATUS" = "Successful" ]; then
+              echo "Instance refresh completed successfully"
+              exit 0
+            elif [ "$STATUS" = "Failed" ] || [ "$STATUS" = "Cancelled" ]; then
+              echo "Instance refresh $STATUS"
+              exit 1
+            else
+              echo "Instance refresh status: $STATUS. Waiting..."
+              sleep 60
+            fi
           done
-          if [ "$REFRESH_STATUS" != "Successful" ]; then
-            echo "Instance refresh failed with status: $REFRESH_STATUS"
-            exit 1
-          fi
