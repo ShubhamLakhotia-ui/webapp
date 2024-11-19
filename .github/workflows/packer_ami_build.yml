@@ -102,12 +102,12 @@ jobs:
       - name: Capture AMI ID
         id: capture_ami
         run: |
-
+          AMI_ID=$(grep -Eo 'ami-[a-z0-9]+' packer_output.txt | tail -n1)
           if [ -z "$AMI_ID" ]; then
             echo "Failed to extract AMI ID from Packer output."
             exit 1
           fi
-          echo "ami_id=$AMI_ID" >> $GITHUB_ENV
+          echo "ami_id=$AMI_ID" >> $GITHUB_OUTPUT
           echo "Captured AMI ID: $AMI_ID"
 
   update_asg:
