@@ -93,7 +93,7 @@ jobs:
           -var "volume_size=${VOLUME_SIZE}" \
           -var "volume_type=${VOLUME_TYPE}" \
           -var "demo_account_id=${DEMO_ACCOUNT_ID}" \
-          ./packer/aws.pkr.hcl
+          ./packer/aws.pkr.hcl | tee packer_output.txt
 
           # Extract AMI ID directly here
           AMI_ID=$(grep -Eo 'ami-[a-z0-9]+' packer_output.txt | tail -n1)
