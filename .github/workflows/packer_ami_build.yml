@@ -24,10 +24,11 @@ jobs:
         run: sudo apt-get update && sudo apt-get upgrade -y
 
       - name: Install Packer
-        run: sudo apt-get update && sudo apt-get install -y packer
+        run: sudo apt-get install -y packer
 
+      # Step 3: Initialize Packer
       - name: Initialize Packer
-        run: packer init aws.pkr.hcl
+        run: packer init ./packer/aws.pkr.hcl
 
       - name: Run Test Cases
         run: npx mocha Test/user.test.js
