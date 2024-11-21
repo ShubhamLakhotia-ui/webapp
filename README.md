@@ -32,3 +32,5 @@ Added packer files named as aws.pkr.hcl
 ## Assignment 5
 
 Updated scripts to remove databases
+Configured SNS and added Middleware and verify api to block unvarified acount.
+Verification link will be valid for 2 mins
