@@ -468,6 +468,17 @@ app.get("/healthz", async (req, res) => {
   }
 });
 
+app.get("/CICD", async (req, res) => {
+  res.setHeader("Cache-Control", "no-cache");
+
+  try {
+    await db.sequelize.authenticate();
+    return res.status(200).end();
+  } catch (error) {
+    return res.status(503).end();
+  }
+});
+
 // app.get("/cicd", async (req, res) => {
 //   res.setHeader("Cache-Control", "no-cache");
 
